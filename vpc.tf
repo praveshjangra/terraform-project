@@ -3,7 +3,7 @@ data "aws_availability_zones" "available" {
 }
 
 resource "aws_vpc" "custome_vpc" {
-  cidr_block       = "192.168.0.0/16"
+  cidr_block       = var.vpc_cidr
   instance_tenancy = "default"
 
   tags = {
@@ -13,9 +13,9 @@ resource "aws_vpc" "custome_vpc" {
 }
 
 resource "aws_subnet" "custom_subnet_public" {
-  count                   = 2
+  count                   = var.env == "prod" ? 2 : 1
   vpc_id                  = aws_vpc.custome_vpc.id
-  cidr_block              = var.private_cidr[count.index]
+  cidr_block              = cidrsubnet(var.vpc_cidr, 8, count.index + 2)
   map_public_ip_on_launch = true
   availability_zone       = data.aws_availability_zones.available.names[count.index]
   tags = {
@@ -24,9 +24,9 @@ resource "aws_subnet" "custom_subnet_public" {
   }
 }
 resource "aws_subnet" "custom_subnet_private" {
-  count             = 2
+  count             = var.env == "prod" ? 2 : 1
   vpc_id            = aws_vpc.custome_vpc.id
-  cidr_block        = var.public_cidr[count.index]
+  cidr_block        = cidrsubnet(var.vpc_cidr, 8, count.index + 4)
   availability_zone = data.aws_availability_zones.available.names[count.index]
   tags = {
     Name  = "Private Subnet - ${count.index + 1}"
@@ -67,14 +67,14 @@ resource "aws_route_table" "custom_private_rt" {
 
 
 resource "aws_route_table_association" "custom_private_associ" {
-  count          = length(var.private_cidr)
+  count          = length(aws_subnet.custom_subnet_private)
   subnet_id      = aws_subnet.custom_subnet_private.*.id[count.index]
   route_table_id = aws_route_table.custom_private_rt.id
   depends_on     = [aws_route_table.custom_private_rt, aws_subnet.custom_subnet_private]
 }
 
 resource "aws_route_table_association" "custom_public_associ" {
-  count          = length(var.public_cidr)
+  count          = length(aws_subnet.custom_subnet_public)
   subnet_id      = aws_subnet.custom_subnet_public.*.id[count.index]
   route_table_id = aws_route_table.custom_public_rt.id
   depends_on     = [aws_route_table.custom_public_rt, aws_subnet.custom_subnet_public]

@@ -1,14 +1,10 @@
-variable "private_cidr" {
-  type    = list
-  default = ["192.168.1.0/24", "192.168.2.0/24"]
+variable "env" {
+  default = "prod"
 }
 
-variable "public_cidr" {
-  type    = list
-  default = ["192.168.3.0/24", "192.168.4.0/24"]
-
+variable "vpc_cidr" {
+  default = "192.168.0.0/16"
 }
-
 variable "key_pair_path" {
   type = map
   default = {
