@@ -12,3 +12,4 @@ variable "key_pair_path" {
     private_key_path = "/home/pjangra/.ssh/id_rsa"
   }
 }
+
