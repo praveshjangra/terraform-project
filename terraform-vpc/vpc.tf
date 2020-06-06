@@ -89,6 +89,12 @@ resource "aws_security_group" "public_ssh" {
     to_port     = "22"
     cidr_blocks = ["0.0.0.0/0"]
   }
+  ingress {
+    from_port = "0"
+    protocol  = "-1"
+    to_port   = "0"
+    self      = true
+  }
   egress {
     from_port   = "0"
     protocol    = "-1"
@@ -103,10 +109,16 @@ resource "aws_security_group" "jumpbox_ssh" {
   description = "SSH access from jumpbox"
   vpc_id      = aws_vpc.custome_vpc.id
   ingress {
-    from_port   = "22"
-    protocol    = "tcp"
-    to_port     = "22"
-    cidr_blocks = [aws_vpc.custome_vpc.cidr_block]
+    from_port       = "22"
+    protocol        = "tcp"
+    to_port         = "22"
+    security_groups = [aws_security_group.public_ssh.id]
+  }
+  ingress {
+    from_port = "0"
+    protocol  = "-1"
+    to_port   = "0"
+    self      = true
   }
   egress {
     from_port   = "0"
@@ -125,24 +137,24 @@ resource "aws_instance" "custom_private_ec2" {
   count           = var.env == "prod" ? 2 : 1
   ami             = "ami-0447a12f28fddb066"
   instance_type   = "t2.micro"
-  subnet_id      = element(aws_subnet.custom_subnet_private.*.id,count.index)
+  subnet_id       = element(aws_subnet.custom_subnet_private.*.id, count.index)
   key_name        = aws_key_pair.deployer.key_name
   security_groups = [aws_security_group.jumpbox_ssh.id]
- tags = {
-   Name = "Private EC2 - ${count.index+1}"    
-}
+  tags = {
+    Name = "Private EC2 - ${count.index + 1}"
+  }
 }
 
 resource "aws_instance" "custom_public_ec2" {
   count           = var.env == "prod" ? 2 : 1
   ami             = "ami-0447a12f28fddb066"
   instance_type   = "t2.micro"
-  subnet_id      = element(aws_subnet.custom_subnet_public.*.id,count.index)
+  subnet_id       = element(aws_subnet.custom_subnet_public.*.id, count.index)
   key_name        = aws_key_pair.deployer.key_name
   security_groups = [aws_security_group.public_ssh.id]
- tags = {
-   Name = "Public EC2 - ${count.index+1}"    
-}
+  tags = {
+    Name = "Public EC2 - ${count.index + 1}"
+  }
 }
 
 resource "aws_eip" "custom_natip" {
